@@ -1,0 +1,258 @@
+:root {
+  --bg: #0f1117;
+  --panel: #171a23;
+  --panel-2: #1d2130;
+  --border: #262b38;
+  --text: #e6e9f0;
+  --muted: #8b93a7;
+  --accent: #5b8cff;
+  --auto: #34c77b;
+  --review: #e8b34b;
+  --human-led: #e26d5a;
+  --radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.app {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+}
+
+/* ---- 头部 ---- */
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.header h1 {
+  font-size: 22px;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+.header .sub {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ---- 区块面板 ---- */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.panel h2 {
+  font-size: 15px;
+  margin: 0 0 12px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel h2 .tag {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: normal;
+}
+
+/* ---- 表单 ---- */
+textarea,
+input {
+  width: 100%;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+}
+textarea:focus,
+input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+label {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 10px 0 6px;
+}
+
+/* ---- 按钮 ---- */
+button {
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+button:hover {
+  filter: brightness(1.15);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+button.ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+button.ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+button.small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* ---- 授权级别徽章 ---- */
+.auth {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.auth.auto {
+  background: rgba(52, 199, 123, 0.15);
+  color: var(--auto);
+}
+.auth.review {
+  background: rgba(232, 179, 75, 0.15);
+  color: var(--review);
+}
+.auth.human-led {
+  background: rgba(226, 109, 90, 0.15);
+  color: var(--human-led);
+}
+
+/* ---- 任务卡 ---- */
+.task {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.task.auto {
+  border-left-color: var(--auto);
+}
+.task.review {
+  border-left-color: var(--review);
+}
+.task.human-led {
+  border-left-color: var(--human-led);
+}
+.task .title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.task .id {
+  color: var(--muted);
+  font-weight: normal;
+  margin-right: 6px;
+}
+.task .risk {
+  color: var(--human-led);
+  font-size: 12px;
+  margin: 6px 0;
+}
+.task .criteria {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--text);
+}
+.task .criteria li {
+  margin: 2px 0;
+}
+.task .dep {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* ---- 拆解过程输出 ---- */
+.stream {
+  background: #0b0d12;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: "SF Mono", Consolas, monospace;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+/* ---- 危险规则行 ---- */
+.danger-rule {
+  display: grid;
+  grid-template-columns: 160px 90px 1fr 30px;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+select {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+/* ---- 摘要 ---- */
+.summary {
+  border-left: 3px solid var(--accent);
+  padding: 8px 12px;
+  background: var(--panel-2);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+/* ---- 错误提示 ---- */
+.error {
+  background: rgba(226, 109, 90, 0.12);
+  border: 1px solid rgba(226, 109, 90, 0.4);
+  color: var(--human-led);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.footer {
+  margin-top: 32px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.footer a {
+  color: var(--accent);
+}
