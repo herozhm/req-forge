@@ -13,7 +13,6 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - name: 类型检查
-        run: npx tsc --noEmit
-      - name: 构建
-        run: npx vite build
+      - run: npm ci
+      - name: 类型检查 + 打包
+        run: npm run build
