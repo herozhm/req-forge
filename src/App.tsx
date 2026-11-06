@@ -7,6 +7,9 @@ import {
   listDecompositions,
   saveDecomposition,
   deleteDecomposition,
+  login,
+  getToken,
+  clearToken,
   type DecompositionRecord,
 } from "./api.js";
 
@@ -217,10 +220,13 @@ export default function App() {
   );
 }
 
-/* ================= 历史记录面板(对接 Go 后端) ================= */
+/* ================= 历史记录面板(对接 Go 后端 + JWT) ================= */
 function HistoryPanel({ onLoad }: { onLoad: (rec: DecompositionRecord) => void }) {
   const [items, setItems] = useState<DecompositionRecord[]>([]);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "error" | "login">("loading");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
 
   async function refresh() {
     setStatus("loading");
@@ -228,7 +234,7 @@ function HistoryPanel({ onLoad }: { onLoad: (rec: DecompositionRecord) => void }
       setItems(await listDecompositions());
       setStatus("ready");
     } catch {
-      setStatus("error");
+      setStatus(getToken() ? "error" : "login");
     }
   }
 
@@ -236,43 +242,95 @@ function HistoryPanel({ onLoad }: { onLoad: (rec: DecompositionRecord) => void }
     refresh();
   }, []);
 
+  async function handleLogin() {
+    setLoginError("");
+    try {
+      await login(username, password);
+      setUsername("");
+      setPassword("");
+      await refresh();
+    } catch (e) {
+      setLoginError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
   async function handleDelete(id: number) {
     await deleteDecomposition(id);
     refresh();
   }
 
+  function handleLogout() {
+    clearToken();
+    setItems([]);
+    setStatus("login");
+  }
+
   return (
     <div className="panel">
-      <h2>
-        🕘 拆解历史(Go 后端)
-        <button className="ghost small" style={{ marginLeft: "auto" }} onClick={refresh}>
-          刷新
-        </button>
-      </h2>
+      <h2>🕘 拆解历史(Go 后端)</h2>
+
+      {status === "login" && (
+        <div>
+          <p className="tag" style={{ marginBottom: 8 }}>
+            后端已加 JWT 鉴权,请登录(demo 账号 admin / admin123)
+          </p>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="用户名"
+              style={{ maxWidth: 160 }}
+            />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="密码"
+              style={{ maxWidth: 160 }}
+            />
+            <button className="small" onClick={handleLogin}>
+              登录
+            </button>
+          </div>
+          {loginError && <div className="error" style={{ marginTop: 8 }}>❌ {loginError}</div>}
+        </div>
+      )}
+
       {status === "loading" && <div className="tag">加载中…</div>}
       {status === "error" && (
         <div className="error">
-          无法连接后端 — 启动 req-forge-server 后可用(go run .)
+          无法连接后端或 token 过期 — 启动 req-forge-server 后重试
         </div>
       )}
-      {status === "ready" && items.length === 0 && <div className="tag">暂无历史记录</div>}
-      {status === "ready" &&
-        items.map((rec) => (
-          <div key={rec.id} className="task" style={{ borderLeftColor: "var(--accent)" }}>
-            <div className="title">{rec.requirement}</div>
-            <div className="dep">
-              {rec.model} · {new Date(rec.created_at).toLocaleString()}
-            </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-              <button className="ghost small" onClick={() => onLoad(rec)}>
-                加载
-              </button>
-              <button className="ghost small" onClick={() => handleDelete(rec.id)}>
-                删除
-              </button>
-            </div>
+      {status === "ready" && (
+        <>
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <button className="ghost small" onClick={refresh}>
+              刷新
+            </button>
+            <button className="ghost small" onClick={handleLogout}>
+              登出
+            </button>
           </div>
-        ))}
+          {items.length === 0 && <div className="tag">暂无历史记录</div>}
+          {items.map((rec) => (
+            <div key={rec.id} className="task" style={{ borderLeftColor: "var(--accent)" }}>
+              <div className="title">{rec.requirement}</div>
+              <div className="dep">
+                {rec.model} · {new Date(rec.created_at).toLocaleString()}
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                <button className="ghost small" onClick={() => onLoad(rec)}>
+                  加载
+                </button>
+                <button className="ghost small" onClick={() => handleDelete(rec.id)}>
+                  删除
+                </button>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 }
