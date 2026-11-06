@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
 import { useStore, persistSettings } from "./store.js";
 import { decompose } from "./llm/decompose.js";
-import { AUTH_LABELS, type DecomposeResult, type AuthLevel } from "./schema/task.js";
+import { AUTH_LABELS, type DecomposeResult } from "./schema/task.js";
 import { exportMarkdown, download } from "./export.js";
+import {
+  listDecompositions,
+  saveDecomposition,
+  deleteDecomposition,
+  type DecompositionRecord,
+} from "./api.js";
 
-type Phase = "idle" | "streaming" | "parsing" | "done" | "error";
+type Phase = "idle" | "streaming" | "done" | "error";
 
 export default function App() {
   const { settings, setSettings, requirement, setRequirement, dangerRules } = useStore();
@@ -14,8 +20,8 @@ export default function App() {
   const [result, setResult] = useState<DecomposeResult | null>(null);
   const [error, setError] = useState("");
   const [retries, setRetries] = useState(0);
+  const [saveNote, setSaveNote] = useState(""); // 保存到后端的状态提示
 
-  // 设置持久化
   useEffect(() => {
     persistSettings(settings);
   }, [settings]);
@@ -29,6 +35,7 @@ export default function App() {
     setError("");
     setResult(null);
     setStreamText("");
+    setSaveNote("");
     setPhase("streaming");
 
     const controller = new AbortController();
@@ -47,6 +54,18 @@ export default function App() {
       setResult(result);
       setRetries(r);
       setPhase("done");
+
+      // 拆解成功后自动保存到 Go 后端(后端未启动则静默降级,不影响主流程)
+      try {
+        await saveDecomposition({
+          requirement,
+          result: JSON.stringify(result),
+          model: settings.model,
+        });
+        setSaveNote("已保存到历史");
+      } catch {
+        setSaveNote("后端未启动,未保存历史(启动 req-forge-server 后可保存)");
+      }
     } catch (e) {
       if (controller.signal.aborted) return;
       setError(e instanceof Error ? e.message : String(e));
@@ -114,7 +133,7 @@ export default function App() {
           placeholder={"粘贴需求描述 / PRD 片段 / 一句话需求…\n\n示例:给净化器配件增加滤芯寿命提醒:基于固件上报的寿命阈值弹提醒,配件信息页显示剩余时长"}
         />
         {error && <div className="error" style={{ marginTop: 12 }}>❌ {error}</div>}
-        <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
+        <div style={{ marginTop: 12, display: "flex", gap: 10, alignItems: "center" }}>
           <button onClick={handleDecompose} disabled={streaming || !requirement.trim()}>
             {streaming ? "拆解中…" : "开始拆解"}
           </button>
@@ -124,13 +143,11 @@ export default function App() {
             </button>
           )}
           {result && (
-            <button
-              className="ghost"
-              onClick={() => download("任务拆解.md", exportMarkdown(result))}
-            >
+            <button className="ghost" onClick={() => download("任务拆解.md", exportMarkdown(result))}>
               导出 Markdown
             </button>
           )}
+          {saveNote && <span className="tag">{saveNote}</span>}
         </div>
       </div>
 
@@ -179,12 +196,83 @@ export default function App() {
         </div>
       )}
 
+      {/* 历史记录(Go 后端) */}
+      <HistoryPanel onLoad={(rec) => {
+        setRequirement(rec.requirement);
+        try {
+          setResult(JSON.parse(rec.result));
+          setPhase("done");
+        } catch {
+          // 结果解析失败则只回填需求
+        }
+      }} />
+
       {/* 危险地图 */}
       <DangerMapPanel />
 
       <div className="footer">
         ReqForge · AI 任务拆解工作台 · 授权分级 / 验收判据 / 依赖显式 — 拆解完成的那一刻,执行和质量就已经被保证了
       </div>
+    </div>
+  );
+}
+
+/* ================= 历史记录面板(对接 Go 后端) ================= */
+function HistoryPanel({ onLoad }: { onLoad: (rec: DecompositionRecord) => void }) {
+  const [items, setItems] = useState<DecompositionRecord[]>([]);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+
+  async function refresh() {
+    setStatus("loading");
+    try {
+      setItems(await listDecompositions());
+      setStatus("ready");
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  async function handleDelete(id: number) {
+    await deleteDecomposition(id);
+    refresh();
+  }
+
+  return (
+    <div className="panel">
+      <h2>
+        🕘 拆解历史(Go 后端)
+        <button className="ghost small" style={{ marginLeft: "auto" }} onClick={refresh}>
+          刷新
+        </button>
+      </h2>
+      {status === "loading" && <div className="tag">加载中…</div>}
+      {status === "error" && (
+        <div className="error">
+          无法连接后端 — 启动 req-forge-server 后可用(go run .)
+        </div>
+      )}
+      {status === "ready" && items.length === 0 && <div className="tag">暂无历史记录</div>}
+      {status === "ready" &&
+        items.map((rec) => (
+          <div key={rec.id} className="task" style={{ borderLeftColor: "var(--accent)" }}>
+            <div className="title">{rec.requirement}</div>
+            <div className="dep">
+              {rec.model} · {new Date(rec.created_at).toLocaleString()}
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+              <button className="ghost small" onClick={() => onLoad(rec)}>
+                加载
+              </button>
+              <button className="ghost small" onClick={() => handleDelete(rec.id)}>
+                删除
+              </button>
+            </div>
+          </div>
+        ))}
     </div>
   );
 }
